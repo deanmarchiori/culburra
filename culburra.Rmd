@@ -17,7 +17,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(osmdata)
 library(dodgr)
 library(tidyverse)
-library(mapview)
 library(sf)
 ```
 
@@ -32,28 +31,23 @@ bbox <- st_bbox(c(xmin = 150.739,
   st_as_sfc()
 ```
 
-# Get streets  
-
-From OSM  
+# Get streets
 
 ```{r}
 estimate_box <- osmdata::getbb("culburra beach, NSW, Australia")
 streets_raw <- dodgr_streetnet(estimate_box, expand = 1)
 ```
 
-clean streets  
+# Clean streets  
 
 ```{r}
 streets <- streets_raw %>% 
   st_intersection(bbox) %>% 
-  st_transform(28356) %>% 
   select(osm_id, name, highway) %>% 
   filter(!osm_id %in% c(43928836, 394813974, 43928837, 404519947, 225636408, 225636411, 225636412, 225636406, 331330145, 4996645, 9642735 )) %>% 
   mutate(highway = fct_recode(highway, 
                               residential = "service",
                               residential = "unclassified",
-                              secondary = "tertiary",
-                              secondary = "secondary_link",
                               path = "track",
                               path = "cycleway",
                               path = "footway"
@@ -63,25 +57,28 @@ streets <- streets_raw %>%
 # Make map
 
 ```{r}
-pal <- c("path" = "grey", "residential" = "dark blue", "secondary" = "black")
-
 ggplot(streets, aes(col = highway)) +
-  geom_sf(data = filter(streets, highway == 'path'), alpha = 0.2, show.legend = F) +
+  geom_sf(data = filter(streets, highway == 'path'), alpha = 0.4, show.legend = F) +
   geom_sf(data = filter(streets, highway == 'residential'), alpha = 0.5, show.legend = F) +
-  geom_sf(data = filter(streets, highway == 'secondary'), alpha = 0.9, show.legend = F, lwd = 0.5) +
-  scale_colour_manual(values = pal) +
-  labs(title = "Culburra Beach, NSW, 2540") +
+  geom_sf(data = filter(streets, highway == 'secondary'), alpha = 0.9, show.legend = F) +
+  scale_colour_manual(values =  c("path" = "#70838B", 
+                                  "residential" = "#0A5D81", 
+                                  "secondary" = "#0A5D81")) +
+  labs(caption = "Culburra Beach",
+       y = "") +
+  expand_limits(y = c(-34.8980, -34.9482)) + 
   theme_minimal() +
   theme(
-    title = element_text(family = "Oxygen", size = 32, color = '#E2E2E2'), 
-    text = element_text(family = "Oxygen"),
-    plot.background = element_rect(fill = "#fff1de", color = NA),
-    panel.background = element_rect(fill = "#fff1de",  color = NA),
+    plot.background = element_rect(fill = "#E4D9C6", color = NA),
+    panel.background = element_rect(fill = "#E4D9C6",  color = NA),
     panel.grid = element_blank(), 
+    axis.text = element_text(colour = "#C7B18A", family = "Ubuntu Mono"),
     axis.ticks = element_blank(), 
     panel.border = element_blank(), 
-    plot.caption = element_text(family = "Oxygen", size = 16, color = '#E2E2E2'))
+    plot.caption = element_text(family = "Ubuntu Mono", size = 85, vjust = -0.2, color = '#C7B18A'), 
+    plot.margin = margin(22,10,22,10, "mm"))
 
+ggsave('culburra.png', width = 297, height = 420, units = "mm", dpi = "retina")
 ```
 
 
