@@ -1,0 +1,92 @@
+---
+title: "Culburra Map"
+author: "Dean Marchiori"
+date: "04/02/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup  
+
+```{r}
+library(osmdata)
+library(dodgr)
+library(tidyverse)
+library(mapview)
+library(sf)
+```
+
+# Bounding Box  
+
+```{r}
+bbox <- st_bbox(c(xmin = 150.739, 
+                  xmax = 150.8, 
+                  ymax = -34.903,
+                  ymin = -34.94), 
+                crs = st_crs(4326)) %>% 
+  st_as_sfc()
+```
+
+# Get streets  
+
+From OSM  
+
+```{r}
+estimate_box <- osmdata::getbb("culburra beach, NSW, Australia")
+streets_raw <- dodgr_streetnet(estimate_box, expand = 1)
+```
+
+clean streets  
+
+```{r}
+streets <- streets_raw %>% 
+  st_intersection(bbox) %>% 
+  st_transform(28356) %>% 
+  select(osm_id, name, highway) %>% 
+  filter(!osm_id %in% c(43928836, 394813974, 43928837, 404519947, 225636408, 225636411, 225636412, 225636406, 331330145, 4996645, 9642735 )) %>% 
+  mutate(highway = fct_recode(highway, 
+                              residential = "service",
+                              residential = "unclassified",
+                              secondary = "tertiary",
+                              secondary = "secondary_link",
+                              path = "track",
+                              path = "cycleway",
+                              path = "footway"
+                              )) 
+```
+
+# Make map
+
+```{r}
+pal <- c("path" = "grey", "residential" = "dark blue", "secondary" = "black")
+
+ggplot(streets, aes(col = highway)) +
+  geom_sf(data = filter(streets, highway == 'path'), alpha = 0.2, show.legend = F) +
+  geom_sf(data = filter(streets, highway == 'residential'), alpha = 0.5, show.legend = F) +
+  geom_sf(data = filter(streets, highway == 'secondary'), alpha = 0.9, show.legend = F, lwd = 0.5) +
+  scale_colour_manual(values = pal) +
+  labs(title = "Culburra Beach, NSW, 2540") +
+  theme_minimal() +
+  theme(
+    title = element_text(family = "Oxygen", size = 32, color = '#E2E2E2'), 
+    text = element_text(family = "Oxygen"),
+    plot.background = element_rect(fill = "#fff1de", color = NA),
+    panel.background = element_rect(fill = "#fff1de",  color = NA),
+    panel.grid = element_blank(), 
+    axis.ticks = element_blank(), 
+    panel.border = element_blank(), 
+    plot.caption = element_text(family = "Oxygen", size = 16, color = '#E2E2E2'))
+
+```
+
+
+
+
+
+
+
